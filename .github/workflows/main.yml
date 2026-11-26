@@ -19,15 +19,14 @@ jobs:
       ANDROID_SDK_ROOT: /usr/local/lib/android/sdk
 
     steps:
-      - name: Checkout repository
+      - name: Checkout
         uses: actions/checkout@v4
 
       - name: Extract project
         id: find
         run: |
           if [ ! -f sary.zip ]; then
-            echo "ERROR: sary.zip was not found in repository root"
-            ls -la
+            echo "ERROR: sary.zip not found"
             exit 1
           fi
 
@@ -37,18 +36,11 @@ jobs:
           FILE=$(find project -type f \( -name settings.gradle.kts -o -name settings.gradle \) | head -n 1)
 
           if [ -z "$FILE" ]; then
-            echo "ERROR: Gradle settings file not found"
-            find project -maxdepth 4 -type f | head -100
+            echo "ERROR: settings.gradle.kts not found"
             exit 1
           fi
 
           DIR=$(dirname "$FILE")
-
-          if [ ! -f "$DIR/gradlew" ]; then
-            echo "ERROR: Gradle wrapper not found in $DIR"
-            exit 1
-          fi
-
           echo "Project directory: $DIR"
           echo "dir=$DIR" >> "$GITHUB_OUTPUT"
 
@@ -58,41 +50,41 @@ jobs:
           distribution: temurin
           java-version: '17'
 
+      - name: Set up Gradle 8.9
+        uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: '8.9'
+
       - name: Find Android SDK Manager
         run: |
           SDKMANAGER=$(find "$ANDROID_HOME/cmdline-tools" -type f -name sdkmanager | head -n 1)
 
           if [ -z "$SDKMANAGER" ]; then
             echo "ERROR: sdkmanager not found"
-            find "$ANDROID_HOME" -maxdepth 4 -type f -name sdkmanager
             exit 1
           fi
 
           echo "SDKMANAGER=$SDKMANAGER" >> "$GITHUB_ENV"
           chmod +x "$SDKMANAGER"
-          echo "Found: $SDKMANAGER"
 
-      - name: Accept Android SDK licenses
+      - name: Accept Android licenses
         run: |
           set +e
           yes | "$SDKMANAGER" --sdk_root="$ANDROID_HOME" --licenses
           true
 
-      - name: Install Android SDK packages
+      - name: Install Android SDK
         run: |
           "$SDKMANAGER" --sdk_root="$ANDROID_HOME" \
             "platform-tools" \
             "platforms;android-34" \
             "build-tools;34.0.0"
 
-      - name: Set up Gradle
-        uses: gradle/actions/setup-gradle@v4
-
       - name: Build debug APK
         working-directory: ${{ steps.find.outputs.dir }}
         run: |
-          chmod +x gradlew
-          ./gradlew --no-daemon assembleDebug --stacktrace --info
+          gradle --version
+          gradle --no-daemon assembleDebug --stacktrace
 
       - name: Upload APK
         uses: actions/upload-artifact@v4
@@ -100,3 +92,4 @@ jobs:
           name: shortcuts-debug-apk
           path: ${{ steps.find.outputs.dir }}/app/build/outputs/apk/debug/*.apk
           if-no-files-found: error
+          
