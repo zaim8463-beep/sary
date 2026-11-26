@@ -23,26 +23,27 @@ jobs:
 
       - name: Set up Android SDK
         uses: android-actions/setup-android@v3
-        with:
-          packages: |
-            platform-tools
-            platforms;android-34
-            build-tools;34.0.0
 
-      - name: Accept Android licenses
-        run: yes | sdkmanager --licenses || true
+      - name: Install Android packages
+        run: |
+          yes | sdkmanager --licenses || true
+          sdkmanager "platform-tools"
+          sdkmanager "platforms;android-34"
+          sdkmanager "build-tools;34.0.0"
 
       - name: Extract project
         run: |
           unzip -o sary.zip -d project
 
-      - name: Find Android project
+      - name: Locate Gradle project
         run: |
-          GRADLE_FILE=$(find project -name settings.gradle -o -name settings.gradle.kts | head -n 1)
+          GRADLE_FILE=$(find project \( -name settings.gradle -o -name settings.gradle.kts \) | head -n 1)
+
           if [ -z "$GRADLE_FILE" ]; then
-            echo "ERROR: Gradle project not found in sary.zip"
+            echo "ERROR: No Gradle project found inside sary.zip"
             exit 1
           fi
+
           echo "PROJECT_DIR=$(dirname "$GRADLE_FILE")" >> "$GITHUB_ENV"
 
       - name: Set up Gradle
