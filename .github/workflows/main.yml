@@ -36,7 +36,7 @@ jobs:
           FILE=$(find project -type f \( -name settings.gradle.kts -o -name settings.gradle \) | head -n 1)
 
           if [ -z "$FILE" ]; then
-            echo "ERROR: settings.gradle.kts not found"
+            echo "ERROR: Gradle settings file not found"
             exit 1
           fi
 
@@ -65,15 +65,15 @@ jobs:
           fi
 
           echo "SDKMANAGER=$SDKMANAGER" >> "$GITHUB_ENV"
-          chmod +x "$SDKMANAGER"
+          echo "Found SDK Manager: $SDKMANAGER"
 
-      - name: Accept Android licenses
+      - name: Accept Android SDK licenses
         run: |
           set +e
           yes | "$SDKMANAGER" --sdk_root="$ANDROID_HOME" --licenses
           true
 
-      - name: Install Android SDK
+      - name: Install Android SDK packages
         run: |
           "$SDKMANAGER" --sdk_root="$ANDROID_HOME" \
             "platform-tools" \
