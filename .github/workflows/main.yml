@@ -11,6 +11,10 @@ jobs:
   build:
     runs-on: ubuntu-latest
 
+    env:
+      ANDROID_HOME: /usr/local/lib/android/sdk
+      ANDROID_SDK_ROOT: /usr/local/lib/android/sdk
+
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
@@ -21,20 +25,26 @@ jobs:
           distribution: temurin
           java-version: '17'
 
-      - name: Set up Android SDK
-        uses: android-actions/setup-android@v3
+      - name: Check Android SDK
+        run: |
+          echo "Android SDK: $ANDROID_HOME"
+          ls -la "$ANDROID_HOME/cmdline-tools"
+          SDKMANAGER="$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager"
+          test -f "$SDKMANAGER"
+          chmod +x "$SDKMANAGER"
+          echo "SDKMANAGER=$SDKMANAGER" >> "$GITHUB_ENV"
 
-      - name: Accept all Android licenses
+      - name: Accept Android licenses
         run: |
           set +o pipefail
-          yes | sdkmanager --licenses
-          set -o pipefail
+          yes | "$SDKMANAGER" --licenses
+          true
 
-      - name: Install Android SDK packages
+      - name: Install Android packages
         run: |
-          sdkmanager "platform-tools"
-          sdkmanager "platforms;android-34"
-          sdkmanager "build-tools;34.0.0"
+          "$SDKMANAGER" "platform-tools"
+          "$SDKMANAGER" "platforms;android-34"
+          "$SDKMANAGER" "build-tools;34.0.0"
 
       - name: Extract project
         run: |
@@ -45,7 +55,7 @@ jobs:
           GRADLE_FILE=$(find project \( -name settings.gradle -o -name settings.gradle.kts \) | head -n 1)
 
           if [ -z "$GRADLE_FILE" ]; then
-            echo "ERROR: Gradle project not found inside sary.zip"
+            echo "ERROR: Gradle project not found in sary.zip"
             exit 1
           fi
 
